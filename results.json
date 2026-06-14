@@ -1,0 +1,12 @@
+{
+  "static_batching": {
+    "total_time": 14.99,
+    "throughput": 0.67,
+    "avg_latency": 14.99
+  },
+  "continuous_batching": {
+    "total_time": 14.35,
+    "throughput": 0.7,
+    "avg_latency": 5.4
+  }
+}

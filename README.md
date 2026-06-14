@@ -61,3 +61,16 @@ curl -X POST http://127.0.0.1:8000/generate \
 - Why prefill and decode phases have different compute profiles
 - How vLLM's PagedAttention solves memory fragmentation
                         
+
+                        ## Benchmark Results
+
+Comparing static batching (sequential) vs continuous batching (concurrent) on CPU with distilgpt2:
+
+| Mode | Throughput | Avg Latency |
+|---|---|---|
+| Static Batching | 0.67 req/sec | 14.99s |
+| Continuous Batching | 0.70 req/sec | 5.40s |
+
+![Benchmark Results](benchmark_results.png)
+
+> Note: Gains are modest on CPU with a small model. On GPU with larger models (7B+), continuous batching typically yields 3-5x throughput improvement because the bottleneck shifts from compute to GPU memory bandwidth — which is where scheduling decisions have real impact.

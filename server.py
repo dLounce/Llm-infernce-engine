@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import asyncio
 from transformers import pipeline
-
 # Load model once at startup
 generator = pipeline("text-generation", model="distilgpt2")
 
@@ -152,3 +151,29 @@ async def health():
 @app.get("/metrics")
 async def get_metrics():
     return metrics.summary()
+
+from fastapi.responses import StreamingResponse
+
+@app.post("/generate/stream")
+async def generate_stream(request: InferenceRequest):
+    request_id = id(request)
+    slots_needed = max(1, request.max_tokens // 64)
+
+    if not kv_cache.allocate(request_id, slots_needed):
+        metrics.record_rejection()
+        return {"status": "rejected", "reason": "out of memory"}
+
+    async def token_generator():
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: generator(request.prompt, max_new_tokens=request.max_tokens, do_sample=True)
+        )
+        full_text = result[0]["generated_text"]
+        for word in full_text.split():
+            yield word + " "
+            await asyncio.sleep(0.05)
+        kv_cache.free(request_id)
+        metrics.record_request(request.max_tokens)
+
+    return StreamingResponse(token_generator(), media_type="text/plain")

@@ -107,12 +107,13 @@ async def batch_scheduler():
             continue
 async def mock_model_execute(batch):
     loop = asyncio.get_event_loop()
-    for request_id, request in batch:
-        result = await loop.run_in_executor(
-            None,
-            lambda r=request: generator(r.prompt, max_new_tokens=r.max_tokens, do_sample=True)
-        )
-        generated_text = result[0]["generated_text"]
+    prompts = [r.prompt for _, r in batch]
+    results = await loop.run_in_executor(
+        None,
+        lambda: generator(prompts, max_new_tokens=50, do_sample=True)
+    )
+    for i, (request_id, request) in enumerate(batch):
+        generated_text = results[i][0]["generated_text"]
         print(f"Generated: {generated_text}")
         result_store[request_id] = generated_text
         if request_id in result_events:
